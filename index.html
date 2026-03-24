@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Happy Birthday to my Wife</title>
+<title>Happy Birthday my Wife🌹</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@600;700&family=Sarabun:wght@300;400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600&family=Kanit:wght@300;400;500;600&family=Prompt:wght@300;400;500;600&family=Mitr:wght@300;400;500&family=Charm:wght@400;700&family=Itim&family=Chonburi&display=swap" rel="stylesheet">
 <style>
@@ -36,20 +36,59 @@ body{font-family:var(--body-font);background:var(--dark);color:var(--white);over
 
 /* ── GALLERY ── */
 .section-gallery{padding:80px 20px;background:linear-gradient(180deg,var(--dark) 0%,var(--dark3) 100%);position:relative;z-index:1;}
-.gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1100px;margin:0 auto;}
-@media(max-width:768px){.gallery-grid{grid-template-columns:repeat(2,1fr);gap:10px;}}
-@media(max-width:480px){.gallery-grid{grid-template-columns:1fr;}.gallery-card:nth-child(1),.gallery-card:nth-child(5),.gallery-card:nth-child(9){grid-column:span 1;}}
-.gallery-card:nth-child(1),.gallery-card:nth-child(5),.gallery-card:nth-child(9){grid-column:span 2;}
-.gallery-card{border-radius:14px;overflow:hidden;position:relative;cursor:pointer;aspect-ratio:3/4;border:1px solid rgba(192,17,43,.3);box-shadow:0 4px 24px rgba(192,17,43,.12);transition:transform .4s cubic-bezier(.23,1,.32,1),box-shadow .4s;}
-.gallery-card:nth-child(1),.gallery-card:nth-child(5),.gallery-card:nth-child(9){aspect-ratio:16/9;}
-.gallery-card:hover{transform:translateY(-6px) scale(1.01);box-shadow:0 16px 48px rgba(232,23,47,.3);border-color:rgba(232,23,47,.6);}
-.gallery-card img{width:100%;height:100%;object-fit:cover;object-position:top center;transition:transform .6s ease;opacity:0;}
-.gallery-card img.loaded{opacity:1;transition:opacity .5s ease,transform .6s ease;}
-.gallery-card:hover img{transform:scale(1.05);}
-.gallery-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,0,5,.9) 0%,rgba(90,0,20,.3) 60%,transparent 100%);opacity:0;transition:opacity .4s;display:flex;flex-direction:column;justify-content:flex-end;padding:22px;gap:6px;}
+
+/* Masonry-style: columns เท่ากัน แต่รูปสูงตามจริง */
+.gallery-grid{
+  columns:3;column-gap:16px;
+  max-width:1100px;margin:0 auto;
+}
+@media(max-width:768px){.gallery-grid{columns:2;column-gap:10px;}}
+@media(max-width:480px){.gallery-grid{columns:1;}}
+
+.gallery-card{
+  display:inline-block;width:100%;
+  break-inside:avoid;margin-bottom:16px;
+  border-radius:14px;overflow:hidden;position:relative;cursor:pointer;
+  border:1px solid rgba(192,17,43,.3);
+  box-shadow:0 4px 24px rgba(192,17,43,.12);
+  transition:transform .4s cubic-bezier(.23,1,.32,1),box-shadow .4s;
+  background:#0f0006;
+}
+@media(max-width:768px){.gallery-card{margin-bottom:10px;}}
+.gallery-card:hover{transform:translateY(-5px) scale(1.01);box-shadow:0 16px 48px rgba(232,23,47,.3);border-color:rgba(232,23,47,.6);}
+
+/* รูปแสดงเต็ม — ไม่ crop ทั้งแนวตั้งและแนวนอน */
+.gallery-card img{
+  width:100%;height:auto;
+  display:block;
+  object-fit:contain;
+  transition:transform .5s ease;
+  opacity:0;
+  background:#0a0003;
+}
+.gallery-card img.loaded{opacity:1;transition:opacity .4s ease,transform .5s ease;}
+.gallery-card:hover img{transform:scale(1.03);}
+
+/* badge orientation */
+.gc-orient{
+  position:absolute;top:8px;left:8px;
+  font-size:.62rem;padding:2px 7px;border-radius:20px;
+  backdrop-filter:blur(6px);
+  font-weight:600;letter-spacing:.5px;
+}
+.gc-orient.portrait{background:rgba(192,17,43,.55);color:#ffccd5;border:1px solid rgba(255,100,130,.4);}
+.gc-orient.landscape{background:rgba(10,60,120,.55);color:#cce4ff;border:1px solid rgba(100,160,255,.4);}
+.gc-orient.square{background:rgba(80,10,60,.55);color:#f0ccff;border:1px solid rgba(180,100,220,.4);}
+
+.gallery-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(10,0,5,.88) 0%,rgba(60,0,20,.2) 55%,transparent 100%);
+  opacity:0;transition:opacity .35s;
+  display:flex;flex-direction:column;justify-content:flex-end;padding:18px;gap:5px;
+}
 .gallery-card:hover .gallery-overlay{opacity:1;}
-.gallery-overlay-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:white;font-weight:600;}
-.gallery-overlay-caption{font-size:.82rem;color:rgba(255,200,200,.85);line-height:1.5;}
+.gallery-overlay-title{font-family:'Playfair Display',serif;font-size:1rem;color:white;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+.gallery-overlay-caption{font-size:.8rem;color:rgba(255,200,200,.88);line-height:1.5;text-shadow:0 1px 3px rgba(0,0,0,.5);}
 
 /* ── CONTENT SECTION (NocoDB) ── */
 .section-content{padding:80px 20px;background:linear-gradient(180deg,var(--dark3) 0%,#0a0005 100%);position:relative;z-index:1;}
@@ -429,12 +468,27 @@ body{font-family:var(--body-font);background:var(--dark);color:var(--white);over
     <div id="at-photos" class="atpanel">
       <div class="admin-card">
         <h3>📷 จัดการรูปภาพ Gallery</h3>
-        <div class="upload-area" onclick="document.getElementById('upload-input').click()">
+
+        <!-- Add zone -->
+        <div class="upload-area" id="drop-zone" onclick="document.getElementById('upload-input').click()"
+          ondragover="event.preventDefault();this.style.borderColor='var(--red2)'"
+          ondragleave="this.style.borderColor=''"
+          ondrop="event.preventDefault();this.style.borderColor='';handleUploadFiles(event.dataTransfer.files)">
           <div style="font-size:2rem;">📷</div>
-          <p style="color:rgba(255,160,160,.65);margin-top:8px;font-size:.88rem;">คลิกเพื่อเพิ่มรูปภาพ · รองรับ JPG, PNG</p>
+          <p style="color:rgba(255,160,160,.65);margin-top:8px;font-size:.88rem;">
+            คลิกหรือลากรูปมาวาง · รองรับ JPG, PNG<br>
+            <span style="font-size:.76rem;opacity:.6;">เพิ่มได้หลายรูปพร้อมกัน</span>
+          </p>
         </div>
         <input type="file" id="upload-input" multiple accept="image/*" style="display:none" onchange="handleUpload(event)">
-        <div id="admin-img-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:16px;"></div>
+
+        <!-- Sort & count bar -->
+        <div style="display:flex;align-items:center;gap:10px;margin:14px 0 10px;flex-wrap:wrap;">
+          <span id="photo-count" style="font-size:.82rem;color:rgba(255,160,160,.6);">0 รูป</span>
+          <span style="font-size:.78rem;color:rgba(255,160,160,.4);">· คลิก 🔄 เพื่อเปลี่ยนรูป · ลากปรับลำดับ</span>
+        </div>
+
+        <div id="admin-img-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;"></div>
       </div>
     </div>
 
@@ -757,6 +811,18 @@ function switchContentTab(id){
 // ════════════════════════════════════
 //  GALLERY (main)
 // ════════════════════════════════════
+function getOrient(img){
+  // detect from stored w/h, or parse from src dimensions later
+  if(img.w && img.h){
+    const r=img.w/img.h;
+    if(r>1.2) return 'landscape';
+    if(r<0.85) return 'portrait';
+    return 'square';
+  }
+  return '';
+}
+function orientLabel(o){return o==='landscape'?'⬛ แนวนอน':o==='portrait'?'▮ แนวตั้ง':o==='square'?'◼ สี่เหลี่ยม':'';}
+
 function setupLazyLoad(){
   const imgs=document.querySelectorAll('.gallery-card img[data-src]');
   if('IntersectionObserver' in window){
@@ -764,7 +830,21 @@ function setupLazyLoad(){
       entries.forEach(e=>{
         if(e.isIntersecting){
           const img=e.target; img.src=img.dataset.src;
-          img.onload=()=>img.classList.add('loaded'); obs.unobserve(img);
+          img.onload=()=>{
+            img.classList.add('loaded');
+            // store dimensions on first load
+            const card=img.closest('.gallery-card');
+            const idx=parseInt(card?.dataset.idx);
+            if(!isNaN(idx) && siteData.images[idx]){
+              siteData.images[idx].w=img.naturalWidth;
+              siteData.images[idx].h=img.naturalHeight;
+              // update orient badge
+              const badge=card.querySelector('.gc-orient');
+              const o=getOrient(siteData.images[idx]);
+              if(badge && o){badge.className='gc-orient '+o;badge.textContent=orientLabel(o);}
+            }
+          };
+          obs.unobserve(img);
         }
       });
     },{rootMargin:'200px'});
@@ -773,15 +853,38 @@ function setupLazyLoad(){
 }
 function renderGallery(){
   const g=document.getElementById('gallery-grid');
-  g.innerHTML=siteData.images.map((img,i)=>`
-    <div class="gallery-card" onclick="openLightbox(${i})">
-      <img ${i<3?`src="${img.src}" class="loaded"`:`data-src="${img.src}"`} alt="${img.title}" loading="lazy">
+  g.innerHTML=siteData.images.map((img,i)=>{
+    const o=getOrient(img);
+    const orientBadge=o?`<div class="gc-orient ${o}">${orientLabel(o)}</div>`:'';
+    const imgTag=i<3
+      ?`<img src="${img.src}" alt="${img.title}" class="loaded" onload="onGalleryImgLoad(this,${i})">`
+      :`<img data-src="${img.src}" alt="${img.title}" loading="lazy">`;
+    return`<div class="gallery-card" data-idx="${i}" onclick="openLightbox(${i})">
+      ${imgTag}
+      ${orientBadge}
       <div class="gallery-overlay">
         <div class="gallery-overlay-title">${img.title}</div>
         <div class="gallery-overlay-caption">${img.caption}</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   setupLazyLoad();
+}
+function onGalleryImgLoad(imgEl,i){
+  imgEl.classList.add('loaded');
+  if(siteData.images[i]){
+    siteData.images[i].w=imgEl.naturalWidth;
+    siteData.images[i].h=imgEl.naturalHeight;
+    const card=imgEl.closest('.gallery-card');
+    const badge=card?.querySelector('.gc-orient');
+    const o=getOrient(siteData.images[i]);
+    if(badge && o){badge.className='gc-orient '+o;badge.textContent=orientLabel(o);}
+    else if(card && o){
+      const b=document.createElement('div');
+      b.className='gc-orient '+o;b.textContent=orientLabel(o);
+      card.appendChild(b);
+    }
+  }
 }
 function renderMain(){
   document.getElementById('hero-title').textContent=siteData.heroTitle;
@@ -1182,35 +1285,163 @@ function switchAdminTab(id){
 // ════════════════════════════════════
 //  PHOTOS ADMIN
 // ════════════════════════════════════
+// ════════════════════════════════════
+//  PHOTOS ADMIN
+// ════════════════════════════════════
+function fmtSize(w,h){
+  if(!w||!h) return '';
+  const r=w/h;
+  const orient=r>1.2?'⬛ แนวนอน':r<0.85?'▮ แนวตั้ง':'◼ สี่เหลี่ยม';
+  return `${w}×${h}px · ${orient}`;
+}
+
 function renderAdminImgCards(){
   const c=document.getElementById('admin-img-cards');
-  c.innerHTML=siteData.images.map((img,i)=>`
-    <div style="background:#0f0006;border:1px solid rgba(192,17,43,.2);border-radius:10px;overflow:hidden;">
-      <img src="${img.src}" style="width:100%;height:130px;object-fit:cover;object-position:top;">
-      <div style="padding:10px;display:flex;flex-direction:column;gap:7px;">
-        <input type="text" value="${img.title.replace(/"/g,'&quot;')}" id="img-t-${i}" placeholder="หัวข้อ" style="width:100%;padding:6px 10px;background:#0a0005;border:1px solid rgba(192,17,43,.2);border-radius:6px;color:var(--white);font-family:var(--body-font);font-size:.82rem;outline:none;">
-        <textarea id="img-c-${i}" placeholder="แคปชั่น" style="width:100%;padding:6px 10px;background:#0a0005;border:1px solid rgba(192,17,43,.2);border-radius:6px;color:var(--white);font-family:var(--body-font);font-size:.82rem;outline:none;resize:vertical;min-height:50px;">${img.caption}</textarea>
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-primary btn-sm" onclick="saveImgCard(${i})">💾</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteImgCard(${i})">🗑️</button>
+  const countEl=document.getElementById('photo-count');
+  if(countEl) countEl.textContent=siteData.images.length+' รูป';
+
+  c.innerHTML=siteData.images.map((img,i)=>{
+    const sizeStr=fmtSize(img.w,img.h);
+    const orient=getOrient(img);
+    const orientColor=orient==='landscape'?'#60a5fa':orient==='portrait'?'#f87171':'#c084fc';
+    return`<div class="admin-img-card-wrap" id="aicw-${i}" draggable="true"
+        ondragstart="dragStart(event,${i})" ondragover="event.preventDefault()"
+        ondrop="dragDrop(event,${i})" ondragend="dragEnd()"
+        style="background:#0f0006;border:1.5px solid rgba(192,17,43,.2);border-radius:12px;overflow:hidden;transition:border-color .2s,opacity .2s;">
+
+      <!-- Image preview area -->
+      <div style="position:relative;background:#0a0003;min-height:140px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+        <img src="${img.src}" alt="${img.title}"
+          style="max-width:100%;max-height:220px;width:auto;height:auto;display:block;object-fit:contain;"
+          onload="onAdminImgLoad(this,${i})">
+
+        <!-- Replace button overlay -->
+        <label title="เปลี่ยนรูปภาพ"
+          style="position:absolute;top:8px;right:8px;background:rgba(192,17,43,.75);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:.72rem;color:white;display:flex;align-items:center;gap:4px;backdrop-filter:blur(4px);border:1px solid rgba(255,100,130,.4);transition:background .2s;"
+          onmouseover="this.style.background='rgba(232,23,47,.9)'" onmouseout="this.style.background='rgba(192,17,43,.75)'">
+          🔄 เปลี่ยนรูป
+          <input type="file" accept="image/*" style="display:none" onchange="replaceImgCard(${i},event)">
+        </label>
+
+        <!-- Drag handle -->
+        <div style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.45);border-radius:6px;padding:4px 6px;font-size:.7rem;color:rgba(255,255,255,.5);cursor:grab;backdrop-filter:blur(4px);">
+          ⠿
+        </div>
+
+        <!-- Size & orient badge -->
+        <div id="aib-${i}" style="position:absolute;bottom:0;left:0;right:0;padding:5px 8px;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);font-size:.68rem;color:${orientColor};text-align:center;">
+          ${sizeStr||'⏳ กำลังโหลด...'}
         </div>
       </div>
-    </div>`).join('');
+
+      <!-- Fields -->
+      <div style="padding:12px;display:flex;flex-direction:column;gap:8px;">
+        <input type="text" value="${img.title.replace(/"/g,'&quot;')}" id="img-t-${i}"
+          placeholder="หัวข้อรูป"
+          style="width:100%;padding:7px 10px;background:#0a0005;border:1px solid rgba(192,17,43,.2);border-radius:7px;color:var(--white);font-family:var(--body-font);font-size:.84rem;outline:none;"
+          onfocus="this.style.borderColor='var(--red2)'" onblur="this.style.borderColor='rgba(192,17,43,.2)'">
+        <textarea id="img-c-${i}" placeholder="แคปชั่น / คำบรรยายภาพ"
+          style="width:100%;padding:7px 10px;background:#0a0005;border:1px solid rgba(192,17,43,.2);border-radius:7px;color:var(--white);font-family:var(--body-font);font-size:.82rem;outline:none;resize:vertical;min-height:56px;"
+          onfocus="this.style.borderColor='var(--red2)'" onblur="this.style.borderColor='rgba(192,17,43,.2)'">${img.caption}</textarea>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span style="font-size:.7rem;color:rgba(255,160,160,.4);margin-right:auto;">รูปที่ ${i+1}</span>
+          <button class="btn btn-primary btn-sm" onclick="saveImgCard(${i})" title="บันทึกชื่อและแคปชั่น">💾 บันทึก</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteImgCard(${i})" title="ลบรูปนี้">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
+
+function onAdminImgLoad(imgEl,i){
+  if(!siteData.images[i]) return;
+  const w=imgEl.naturalWidth, h=imgEl.naturalHeight;
+  siteData.images[i].w=w; siteData.images[i].h=h;
+  const badge=document.getElementById('aib-'+i);
+  if(badge){
+    const orient=getOrient(siteData.images[i]);
+    const c=orient==='landscape'?'#60a5fa':orient==='portrait'?'#f87171':'#c084fc';
+    badge.style.color=c;
+    badge.textContent=fmtSize(w,h);
+  }
+}
+
+// Replace single image
+function replaceImgCard(i, event){
+  const file=event.target.files[0];
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const tempImg=new Image();
+    tempImg.onload=()=>{
+      siteData.images[i].src=ev.target.result;
+      siteData.images[i].w=tempImg.naturalWidth;
+      siteData.images[i].h=tempImg.naturalHeight;
+      renderAdminImgCards();
+      renderGallery();
+      showToast(`✓ เปลี่ยนรูปที่ ${i+1} แล้ว (${tempImg.naturalWidth}×${tempImg.naturalHeight})`);
+    };
+    tempImg.src=ev.target.result;
+  };
+  r.readAsDataURL(file);
+  event.target.value='';
+}
+
 function saveImgCard(i){
   siteData.images[i].title=document.getElementById('img-t-'+i).value;
   siteData.images[i].caption=document.getElementById('img-c-'+i).value;
+  renderGallery();
   showToast('บันทึกรูปที่ '+(i+1)+' ✓');
 }
 function deleteImgCard(i){
-  if(confirm('ลบรูปนี้?')){siteData.images.splice(i,1);renderAdminImgCards();renderGallery();showToast('ลบแล้ว');}
+  if(confirm('ลบรูปที่ '+(i+1)+'?')){
+    siteData.images.splice(i,1);
+    renderAdminImgCards();renderGallery();
+    showToast('ลบแล้ว');
+  }
 }
-function handleUpload(e){
-  Array.from(e.target.files).forEach(file=>{
+
+// Add new images
+function handleUploadFiles(files){
+  let loaded=0;
+  const total=files.length;
+  Array.from(files).forEach(file=>{
+    if(!file.type.startsWith('image/')){showToast('⚠️ รองรับเฉพาะไฟล์รูปภาพ');return;}
     const r=new FileReader();
-    r.onload=ev=>{siteData.images.push({src:ev.target.result,title:'รูปใหม่',caption:'แคปชั่น...'});renderAdminImgCards();renderGallery();showToast('เพิ่มรูปแล้ว ✓');};
+    r.onload=ev=>{
+      const tempImg=new Image();
+      tempImg.onload=()=>{
+        siteData.images.push({
+          src:ev.target.result,
+          title:'รูปใหม่',caption:'แคปชั่น...',
+          w:tempImg.naturalWidth,h:tempImg.naturalHeight
+        });
+        loaded++;
+        if(loaded===total){
+          renderAdminImgCards();renderGallery();
+          showToast(`✓ เพิ่ม ${total} รูปแล้ว`);
+        }
+      };
+      tempImg.src=ev.target.result;
+    };
     r.readAsDataURL(file);
-  });e.target.value='';
+  });
+}
+function handleUpload(e){handleUploadFiles(e.target.files);e.target.value='';}
+
+// Drag-to-reorder
+let _dragIdx=-1;
+function dragStart(e,i){_dragIdx=i;e.currentTarget.style.opacity='.45';}
+function dragEnd(){
+  document.querySelectorAll('.admin-img-card-wrap').forEach(el=>el.style.opacity='1');
+  _dragIdx=-1;
+}
+function dragDrop(e,targetIdx){
+  if(_dragIdx<0||_dragIdx===targetIdx) return;
+  const moved=siteData.images.splice(_dragIdx,1)[0];
+  siteData.images.splice(targetIdx,0,moved);
+  renderAdminImgCards();renderGallery();
+  showToast('เรียงลำดับใหม่แล้ว ✓');
 }
 
 // ════════════════════════════════════

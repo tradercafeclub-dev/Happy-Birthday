@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Happy Birthday my Wife🌹</title>
+<title>Birthday My Wife🌹</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@600;700&family=Sarabun:wght@300;400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600&family=Kanit:wght@300;400;500;600&family=Prompt:wght@300;400;500;600&family=Mitr:wght@300;400;500&family=Charm:wght@400;700&family=Itim&family=Chonburi&display=swap" rel="stylesheet">
 <style>
@@ -541,6 +541,17 @@ body{font-family:var(--body-font);background:var(--dark);color:var(--white);over
         </div>
       </div>
 
+      <!-- Storage Status -->
+      <div class="admin-card">
+        <h3>💾 สถานะ Local Storage</h3>
+        <p style="font-size:.82rem;color:rgba(255,160,160,.6);margin-bottom:14px;">ตรวจสอบข้อมูลที่บันทึกอยู่ใน browser</p>
+        <div id="storage-status" style="display:grid;gap:8px;"></div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="refreshStorageStatus()">🔄 รีเฟรช</button>
+          <button class="btn btn-danger btn-sm" onclick="clearAllStorage()" title="ล้างข้อมูลทั้งหมด — ระวัง!">🗑️ ล้างทั้งหมด</button>
+        </div>
+      </div>
+
       <!-- NocoDB Setup -->
       <div class="admin-card">
         <h3>☁️ ตั้งค่า NocoDB</h3>
@@ -600,7 +611,10 @@ body{font-family:var(--body-font);background:var(--dark);color:var(--white);over
 // ════════════════════════════════════
 const WORKER_URL = 'https://tcc-proxy.tradercafeclub.workers.dev';
 const NOCO_PROJ  = 'po6zt3k3ebeitbj';
-const LS_KEY     = 'bday-v5';
+const LS_KEY     = 'bday-v5';        // siteData (ไม่มี images)
+const LS_IMGS    = 'bday-v5-imgs';   // รูปภาพ — แยก key เพราะใหญ่
+const LS_TABS    = 'bday-v5-tabs';   // BDAY_TABS
+const LS_ITEMS   = 'bday-v5-items';  // BDAY_ITEMS
 const LS_NOCO    = 'bday-noco-cfg';
 const LS_PW      = 'bday-admin-pw';
 
@@ -642,21 +656,66 @@ let siteData = {
   images:[]
 };
 
-let BDAY_TABS  = [...DEFAULT_TABS];  // {id, icon, label, _nocoId?}
-let BDAY_ITEMS = [...DEFAULT_ITEMS]; // {t,s,i,l,p,y,z,o,_nocoId?}
+let BDAY_TABS  = [...DEFAULT_TABS];
+let BDAY_ITEMS = [...DEFAULT_ITEMS];
 let _nocoLoaded = false;
 let _activeContentTab = '';
 let _itemFilter = '';
 let _currentLightbox = 0;
 let ADMIN_PW = localStorage.getItem(LS_PW) || '1234';
 
-// NocoDB table IDs (stored in localStorage)
+// NocoDB table IDs
 let NOCO_TBL = {tabs:'', items:'', config:''};
 try{const c=JSON.parse(localStorage.getItem(LS_NOCO)||'{}');Object.assign(NOCO_TBL,c);}catch(e){}
 
-// Load main site data
+// ── โหลด siteData (ข้อความหลัก)
 try{const s=JSON.parse(localStorage.getItem(LS_KEY)||'{}');Object.assign(siteData,s);}catch(e){}
-if(!siteData.images||!siteData.images.length) siteData.images=INITIAL_IMGS;
+
+// ── โหลดรูปภาพ (แยก key เพราะ base64 ใหญ่)
+try{
+  const savedImgs=JSON.parse(localStorage.getItem(LS_IMGS)||'null');
+  if(savedImgs&&savedImgs.length) siteData.images=savedImgs;
+  else if(!siteData.images||!siteData.images.length) siteData.images=INITIAL_IMGS;
+}catch(e){ if(!siteData.images||!siteData.images.length) siteData.images=INITIAL_IMGS; }
+
+// ── โหลด BDAY_TABS
+try{
+  const savedTabs=JSON.parse(localStorage.getItem(LS_TABS)||'null');
+  if(savedTabs&&savedTabs.length) BDAY_TABS=savedTabs;
+}catch(e){}
+
+// ── โหลด BDAY_ITEMS
+try{
+  const savedItems=JSON.parse(localStorage.getItem(LS_ITEMS)||'null');
+  if(savedItems&&savedItems.length) BDAY_ITEMS=savedItems;
+}catch(e){}
+
+// ════════════════════════════════════
+//  PERSIST HELPERS — เรียกหลังแก้ไขข้อมูลทุกครั้ง
+// ════════════════════════════════════
+function persistSiteData(){
+  try{localStorage.setItem(LS_KEY,JSON.stringify({...siteData,images:[]}));}
+  catch(e){console.warn('persist siteData:',e);}
+}
+function persistImages(){
+  try{
+    // บีบรูปออกก่อน save (ตัดเฉพาะ src, title, caption, w, h)
+    const slim=siteData.images.map(img=>({src:img.src,title:img.title,caption:img.caption,w:img.w,h:img.h}));
+    localStorage.setItem(LS_IMGS,JSON.stringify(slim));
+  }catch(e){
+    if(e.name==='QuotaExceededError'||e.code===22){
+      showToast('⚠️ พื้นที่ browser เต็ม — รูปถูกบันทึกชั่วคราว refresh จะหาย');
+    } else { console.warn('persist images:',e); }
+  }
+}
+function persistTabs(){
+  try{localStorage.setItem(LS_TABS,JSON.stringify(BDAY_TABS));}
+  catch(e){console.warn('persist tabs:',e);}
+}
+function persistItems(){
+  try{localStorage.setItem(LS_ITEMS,JSON.stringify(BDAY_ITEMS));}
+  catch(e){console.warn('persist items:',e);}
+}
 
 // ════════════════════════════════════
 //  NOCO API HELPERS
@@ -730,6 +789,7 @@ function renderFontGrid(){
 function selectFont(n){
   siteData.selectedFont=n; applyFont(n);
   document.getElementById('font-sample').style.fontFamily=`'${n}',sans-serif`;
+  persistSiteData();       // ✅ บันทึกฟอนต์
   renderFontGrid();
 }
 
@@ -988,17 +1048,24 @@ async function saveTab(){
   if(_editTabIdx>=0){
     BDAY_TABS[_editTabIdx].label=label;
     BDAY_TABS[_editTabIdx].icon=icon;
+    // sync NocoDB ถ้ามี
     if(BDAY_TABS[_editTabIdx]._nocoId && NOCO_TBL.tabs){
-      try{await nocoPatch(NOCO_TBL.tabs,BDAY_TABS[_editTabIdx]._nocoId,{Label:label,Icon:icon});}catch(e){}
+      try{await nocoPatch(NOCO_TBL.tabs,BDAY_TABS[_editTabIdx]._nocoId,{Label:label,Icon:icon});}
+      catch(e){console.warn('patch tab NocoDB:',e.message);}
     }
   } else {
     if(BDAY_TABS.find(t=>t.id===id)){showToast('⚠️ Tab ID นี้มีอยู่แล้ว');return;}
     const nb={id,icon,label};
     if(NOCO_TBL.tabs){
-      try{const r=await nocoPost(NOCO_TBL.tabs,{TabId:id,Label:label,Icon:icon,SortOrder:BDAY_TABS.length});if(r.Id)nb._nocoId=r.Id;}catch(e){}
+      try{
+        const r=await nocoPost(NOCO_TBL.tabs,{TabId:id,Label:label,Icon:icon,SortOrder:BDAY_TABS.length});
+        if(r.Id) nb._nocoId=r.Id;
+      }catch(e){console.warn('post tab NocoDB:',e.message);}
     }
     BDAY_TABS.push(nb);
   }
+
+  persistTabs();           // ✅ บันทึกลง localStorage
   closeTabModal();
   renderAdminTabList();
   renderContentSection();
@@ -1007,8 +1074,12 @@ async function saveTab(){
 async function deleteTab(idx){
   if(!confirm(`ลบหน้า "${BDAY_TABS[idx].label}"?`)) return;
   const tb=BDAY_TABS[idx];
-  if(tb._nocoId && NOCO_TBL.tabs){try{await nocoDelete(NOCO_TBL.tabs,tb._nocoId);}catch(e){}}
+  if(tb._nocoId && NOCO_TBL.tabs){
+    try{await nocoDelete(NOCO_TBL.tabs,tb._nocoId);}
+    catch(e){console.warn('delete tab NocoDB:',e.message);}
+  }
   BDAY_TABS.splice(idx,1);
+  persistTabs();           // ✅ บันทึกลง localStorage
   renderAdminTabList();
   renderContentSection();
   showToast('ลบหน้าแล้ว');
@@ -1071,17 +1142,23 @@ async function saveItem(){
   const nocoBody={Title:it.t,Subtitle:it.s,Page:it.p,Type:it.y,Size:it.z,SortOrder:it.o,ImageUrl:it.i,LinkUrl:it.l};
 
   if(_editItemIdx>=0){
+    // แก้ไข
     if(nocoId && NOCO_TBL.items){
-      try{await nocoPatch(NOCO_TBL.items,nocoId,nocoBody);}catch(e){}
+      try{await nocoPatch(NOCO_TBL.items,nocoId,nocoBody);}
+      catch(e){console.warn('patch item NocoDB:',e.message);}
       it._nocoId=nocoId;
     }
     BDAY_ITEMS[_editItemIdx]=it;
   } else {
+    // เพิ่มใหม่
     if(NOCO_TBL.items){
-      try{const r=await nocoPost(NOCO_TBL.items,nocoBody);if(r.Id)it._nocoId=r.Id;}catch(e){}
+      try{const r=await nocoPost(NOCO_TBL.items,nocoBody);if(r.Id)it._nocoId=r.Id;}
+      catch(e){console.warn('post item NocoDB:',e.message);}
     }
     BDAY_ITEMS.push(it);
   }
+
+  persistItems();          // ✅ บันทึกลง localStorage
   closeItemModal();
   renderAdminItemList();
   renderContentSection();
@@ -1090,8 +1167,12 @@ async function saveItem(){
 async function deleteItem(idx){
   const it=BDAY_ITEMS[idx];
   if(!confirm(`ลบ "${it.t}"?`)) return;
-  if(it._nocoId && NOCO_TBL.items){try{await nocoDelete(NOCO_TBL.items,it._nocoId);}catch(e){}}
+  if(it._nocoId && NOCO_TBL.items){
+    try{await nocoDelete(NOCO_TBL.items,it._nocoId);}
+    catch(e){console.warn('delete item NocoDB:',e.message);}
+  }
   BDAY_ITEMS.splice(idx,1);
+  persistItems();          // ✅ บันทึกลง localStorage
   renderAdminItemList();
   renderContentSection();
   showToast('ลบ Item แล้ว');
@@ -1115,7 +1196,8 @@ async function loadTabsFromNoco(){
   try{
     const rows=await nocoGet(NOCO_TBL.tabs);
     if(rows.length){
-      BDAY_TABS=rows.map(r=>({id:r.TabId||r.Id,icon:r.Icon||'📄',label:r.Label||r.TabId,_nocoId:r.Id}));
+      BDAY_TABS=rows.map(r=>({id:r.TabId||String(r.Id),icon:r.Icon||'📄',label:r.Label||r.TabId,_nocoId:r.Id}));
+      persistTabs();     // ✅ cache ลง localStorage
     }
     renderAdminTabList();
     renderContentSection();
@@ -1136,6 +1218,7 @@ async function loadItemsFromNoco(){
         o:r.SortOrder||0,_nocoId:r.Id
       }));
       _nocoLoaded=true;
+      persistItems();    // ✅ cache ลง localStorage
     }
     renderAdminItemList();
     renderContentSection();
@@ -1270,7 +1353,7 @@ function switchAdminTab(id){
   document.querySelectorAll('.atnav').forEach(b=>b.classList.toggle('active',b.dataset.at===id));
   document.querySelectorAll('.atpanel').forEach(p=>p.classList.toggle('active',p.id==='at-'+id));
   if(id==='content'){updateNocoStatusBar();renderAdminTabList();renderAdminItemList();}
-  if(id==='settings'){loadNocoConfigUI();}
+  if(id==='settings'){loadNocoConfigUI();refreshStorageStatus();}
   if(id==='font'){renderFontGrid();}
   if(id==='photos'){renderAdminImgCards();}
   if(id==='text'){
@@ -1280,6 +1363,65 @@ function switchAdminTab(id){
     document.getElementById('e-wish-title').value=siteData.wishTitle;
     document.getElementById('e-wish-text').value=siteData.wishText;
   }
+}
+
+function refreshStorageStatus(){
+  const el=document.getElementById('storage-status');
+  if(!el) return;
+  const keys=[
+    {key:LS_KEY,   label:'📝 ข้อความหลัก'},
+    {key:LS_IMGS,  label:'🖼️ รูปภาพ Gallery'},
+    {key:LS_TABS,  label:'🗂️ หน้า/Tabs'},
+    {key:LS_ITEMS, label:'📋 Content Items'},
+    {key:LS_NOCO,  label:'☁️ NocoDB Config'},
+    {key:LS_PW,    label:'🔐 รหัสผ่าน'},
+  ];
+  el.innerHTML=keys.map(({key,label})=>{
+    const raw=localStorage.getItem(key);
+    if(!raw){return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#0a0003;border-radius:8px;font-size:.82rem;"><span style="color:rgba(255,160,160,.5);">${label}</span><span style="color:rgba(255,100,100,.5);">— ยังไม่มีข้อมูล</span></div>`;}
+    const kb=(raw.length/1024).toFixed(1);
+    let detail='';
+    try{
+      const parsed=JSON.parse(raw);
+      if(Array.isArray(parsed)) detail=`(${parsed.length} รายการ)`;
+      else if(typeof parsed==='object') detail=`(${Object.keys(parsed).length} fields)`;
+    }catch(e){detail='';}
+    const color=parseFloat(kb)>500?'#fbbf24':parseFloat(kb)>100?'#86efac':'#4ade80';
+    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#0a0003;border-radius:8px;font-size:.82rem;">
+      <span style="color:rgba(255,200,200,.8);">${label} ${detail}</span>
+      <span style="color:${color};font-weight:600;">${kb} KB</span>
+    </div>`;
+  }).join('');
+
+  // Total usage estimate
+  let total=0;
+  keys.forEach(({key})=>{const v=localStorage.getItem(key);if(v)total+=v.length;});
+  const totalKB=(total/1024).toFixed(1);
+  const totalPct=((total/5242880)*100).toFixed(1);
+  const barColor=parseFloat(totalPct)>80?'var(--red2)':parseFloat(totalPct)>50?'#fbbf24':'#4ade80';
+  el.innerHTML+=`<div style="margin-top:8px;padding:10px 12px;background:#0a0003;border-radius:8px;">
+    <div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:6px;">
+      <span style="color:rgba(255,160,160,.6);">พื้นที่รวม</span>
+      <span style="color:${barColor};font-weight:600;">${totalKB} KB / ~5120 KB (${totalPct}%)</span>
+    </div>
+    <div style="background:#1a000c;border-radius:4px;height:6px;overflow:hidden;">
+      <div style="height:100%;width:${Math.min(parseFloat(totalPct),100)}%;background:${barColor};border-radius:4px;transition:width .4s;"></div>
+    </div>
+  </div>`;
+}
+
+function clearAllStorage(){
+  if(!confirm('⚠️ ล้างข้อมูลทั้งหมดใน browser?\nรูปภาพ, Tabs, Items และการตั้งค่าทั้งหมดจะถูกลบ\n(ยกเว้น NocoDB config)')) return;
+  [LS_KEY,LS_IMGS,LS_TABS,LS_ITEMS].forEach(k=>localStorage.removeItem(k));
+  // reset state
+  siteData.images=INITIAL_IMGS;
+  BDAY_TABS=[...DEFAULT_TABS];
+  BDAY_ITEMS=[...DEFAULT_ITEMS];
+  renderMain();
+  renderAdminTabList();
+  renderAdminItemList();
+  refreshStorageStatus();
+  showToast('✓ ล้างข้อมูลแล้ว — ใช้ข้อมูล default');
 }
 
 // ════════════════════════════════════
@@ -1377,6 +1519,7 @@ function replaceImgCard(i, event){
       siteData.images[i].src=ev.target.result;
       siteData.images[i].w=tempImg.naturalWidth;
       siteData.images[i].h=tempImg.naturalHeight;
+      persistImages();      // ✅ บันทึกลง localStorage
       renderAdminImgCards();
       renderGallery();
       showToast(`✓ เปลี่ยนรูปที่ ${i+1} แล้ว (${tempImg.naturalWidth}×${tempImg.naturalHeight})`);
@@ -1390,12 +1533,14 @@ function replaceImgCard(i, event){
 function saveImgCard(i){
   siteData.images[i].title=document.getElementById('img-t-'+i).value;
   siteData.images[i].caption=document.getElementById('img-c-'+i).value;
+  persistImages();        // ✅ บันทึกลง localStorage
   renderGallery();
   showToast('บันทึกรูปที่ '+(i+1)+' ✓');
 }
 function deleteImgCard(i){
   if(confirm('ลบรูปที่ '+(i+1)+'?')){
     siteData.images.splice(i,1);
+    persistImages();      // ✅ บันทึกลง localStorage
     renderAdminImgCards();renderGallery();
     showToast('ลบแล้ว');
   }
@@ -1404,9 +1549,10 @@ function deleteImgCard(i){
 // Add new images
 function handleUploadFiles(files){
   let loaded=0;
-  const total=files.length;
+  const total=Array.from(files).filter(f=>f.type.startsWith('image/')).length;
+  if(!total){showToast('⚠️ รองรับเฉพาะไฟล์รูปภาพ');return;}
   Array.from(files).forEach(file=>{
-    if(!file.type.startsWith('image/')){showToast('⚠️ รองรับเฉพาะไฟล์รูปภาพ');return;}
+    if(!file.type.startsWith('image/')) return;
     const r=new FileReader();
     r.onload=ev=>{
       const tempImg=new Image();
@@ -1418,8 +1564,9 @@ function handleUploadFiles(files){
         });
         loaded++;
         if(loaded===total){
+          persistImages();    // ✅ บันทึกลง localStorage
           renderAdminImgCards();renderGallery();
-          showToast(`✓ เพิ่ม ${total} รูปแล้ว`);
+          showToast(`✓ เพิ่ม ${total} รูปแล้ว — บันทึกแล้ว`);
         }
       };
       tempImg.src=ev.target.result;
@@ -1440,6 +1587,7 @@ function dragDrop(e,targetIdx){
   if(_dragIdx<0||_dragIdx===targetIdx) return;
   const moved=siteData.images.splice(_dragIdx,1)[0];
   siteData.images.splice(targetIdx,0,moved);
+  persistImages();          // ✅ บันทึกลง localStorage
   renderAdminImgCards();renderGallery();
   showToast('เรียงลำดับใหม่แล้ว ✓');
 }
@@ -1448,14 +1596,22 @@ function dragDrop(e,targetIdx){
 //  SAVE ALL
 // ════════════════════════════════════
 function saveAll(){
-  siteData.heroTitle=document.getElementById('e-hero-title').value||siteData.heroTitle;
-  siteData.heroSubtitle=document.getElementById('e-hero-subtitle').value||siteData.heroSubtitle;
-  siteData.heroMessage=document.getElementById('e-hero-message').value||siteData.heroMessage;
-  siteData.wishTitle=document.getElementById('e-wish-title').value||siteData.wishTitle;
-  siteData.wishText=document.getElementById('e-wish-text').value||siteData.wishText;
-  try{localStorage.setItem(LS_KEY,JSON.stringify({...siteData,images:[]}));}catch(e){}
+  // อ่านค่าจาก form ถ้า element มีอยู่
+  const fv=id=>{const el=document.getElementById(id);return el?el.value:null;}
+  if(fv('e-hero-title')!==null)   siteData.heroTitle   = fv('e-hero-title')  ||siteData.heroTitle;
+  if(fv('e-hero-subtitle')!==null) siteData.heroSubtitle= fv('e-hero-subtitle')||siteData.heroSubtitle;
+  if(fv('e-hero-message')!==null)  siteData.heroMessage = fv('e-hero-message') ||siteData.heroMessage;
+  if(fv('e-wish-title')!==null)    siteData.wishTitle   = fv('e-wish-title')  ||siteData.wishTitle;
+  if(fv('e-wish-text')!==null)     siteData.wishText    = fv('e-wish-text')   ||siteData.wishText;
+
+  // บันทึกแยกตาม key
+  persistSiteData();   // ข้อความหลัก
+  persistImages();     // รูปภาพ gallery
+  persistTabs();       // หน้า/tabs
+  persistItems();      // content items
+
   renderMain();
-  showToast('✓ บันทึกแล้ว!');
+  showToast('✓ บันทึกทั้งหมดแล้ว!');
 }
 
 // ════════════════════════════════════

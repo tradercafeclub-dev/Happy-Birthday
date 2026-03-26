@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Happy Birthday to my Wife🌹</title>
+<title>Happy Birthday My Wife🌹</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@600;700&family=Sarabun:wght@300;400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600&family=Kanit:wght@300;400;500;600&family=Prompt:wght@300;400;500;600&family=Mitr:wght@300;400;500&family=Charm:wght@400;700&family=Itim&family=Chonburi&display=swap" rel="stylesheet">
 <style>
@@ -1927,166 +1927,7 @@ async function dragDrop(e,targetIdx){
   renderGallery();
   showToast('เรียงลำดับใหม่แล้ว ✓');
 }
-  if(!w||!h) return '';
-  const r=w/h;
-  const orient=r>1.2?'⬛ แนวนอน':r<0.85?'▮ แนวตั้ง':'◼ สี่เหลี่ยม';
-  return `${w}×${h}px · ${orient}`;
-}
 
-function renderAdminImgCards(){
-  const c=document.getElementById('admin-img-cards');
-  const countEl=document.getElementById('photo-count');
-  if(countEl) countEl.textContent=siteData.images.length+' รูป';
-
-  c.innerHTML=siteData.images.map((img,i)=>{
-    const sizeStr=fmtSize(img.w,img.h);
-    const orient=getOrient(img);
-    const orientColor=orient==='landscape'?'#60a5fa':orient==='portrait'?'#f87171':'#c084fc';
-    return`<div class="admin-img-card-wrap" id="aicw-${i}" draggable="true"
-        ondragstart="dragStart(event,${i})" ondragover="event.preventDefault()"
-        ondrop="dragDrop(event,${i})" ondragend="dragEnd()"
-        style="background:#0f0006;border:1.5px solid rgba(192,17,43,.2);border-radius:12px;overflow:hidden;transition:border-color .2s,opacity .2s;">
-
-      <!-- Image preview area -->
-      <div style="position:relative;background:#0a0003;min-height:140px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-        <img src="${img.src}" alt="${img.title}"
-          style="max-width:100%;max-height:220px;width:auto;height:auto;display:block;object-fit:contain;"
-          onload="onAdminImgLoad(this,${i})">
-
-        <!-- Replace button overlay -->
-        <label title="เปลี่ยนรูปภาพ"
-          style="position:absolute;top:8px;right:8px;background:rgba(192,17,43,.75);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:.72rem;color:white;display:flex;align-items:center;gap:4px;backdrop-filter:blur(4px);border:1px solid rgba(255,100,130,.4);transition:background .2s;"
-          onmouseover="this.style.background='rgba(232,23,47,.9)'" onmouseout="this.style.background='rgba(192,17,43,.75)'">
-          🔄 เปลี่ยนรูป
-          <input type="file" accept="image/*" style="display:none" onchange="replaceImgCard(${i},event)">
-        </label>
-
-        <!-- Drag handle -->
-        <div style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.45);border-radius:6px;padding:4px 6px;font-size:.7rem;color:rgba(255,255,255,.5);cursor:grab;backdrop-filter:blur(4px);">
-          ⠿
-        </div>
-
-        <!-- Size & orient badge -->
-        <div id="aib-${i}" style="position:absolute;bottom:0;left:0;right:0;padding:5px 8px;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);font-size:.68rem;color:${orientColor};text-align:center;">
-          ${sizeStr||'⏳ กำลังโหลด...'}
-        </div>
-      </div>
-
-      <!-- Fields -->
-      <div style="padding:12px;display:flex;flex-direction:column;gap:8px;">
-        <input type="text" value="${img.title.replace(/"/g,'&quot;')}" id="img-t-${i}"
-          placeholder="หัวข้อรูป"
-          style="width:100%;padding:7px 10px;background:#0a0005;border:1px solid rgba(192,17,43,.2);border-radius:7px;color:var(--white);font-family:var(--body-font);font-size:.84rem;outline:none;"
-          onfocus="this.style.borderColor='var(--red2)'" onblur="this.style.borderColor='rgba(192,17,43,.2)'">
-        <textarea id="img-c-${i}" placeholder="แคปชั่น / คำบรรยายภาพ"
-          style="width:100%;padding:7px 10px;background:#0a0005;border:1px solid rgba(192,17,43,.2);border-radius:7px;color:var(--white);font-family:var(--body-font);font-size:.82rem;outline:none;resize:vertical;min-height:56px;"
-          onfocus="this.style.borderColor='var(--red2)'" onblur="this.style.borderColor='rgba(192,17,43,.2)'">${img.caption}</textarea>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <span style="font-size:.7rem;color:rgba(255,160,160,.4);margin-right:auto;">รูปที่ ${i+1}</span>
-          <button class="btn btn-primary btn-sm" onclick="saveImgCard(${i})" title="บันทึกชื่อและแคปชั่น">💾 บันทึก</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteImgCard(${i})" title="ลบรูปนี้">🗑️</button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function onAdminImgLoad(imgEl,i){
-  if(!siteData.images[i]) return;
-  const w=imgEl.naturalWidth, h=imgEl.naturalHeight;
-  siteData.images[i].w=w; siteData.images[i].h=h;
-  const badge=document.getElementById('aib-'+i);
-  if(badge){
-    const orient=getOrient(siteData.images[i]);
-    const c=orient==='landscape'?'#60a5fa':orient==='portrait'?'#f87171':'#c084fc';
-    badge.style.color=c;
-    badge.textContent=fmtSize(w,h);
-  }
-}
-
-// Replace single image
-function replaceImgCard(i, event){
-  const file=event.target.files[0];
-  if(!file) return;
-  const r=new FileReader();
-  r.onload=ev=>{
-    const tempImg=new Image();
-    tempImg.onload=()=>{
-      siteData.images[i].src=ev.target.result;
-      siteData.images[i].w=tempImg.naturalWidth;
-      siteData.images[i].h=tempImg.naturalHeight;
-      persistImages();      // ✅ บันทึกลง localStorage
-      renderAdminImgCards();
-      renderGallery();
-      showToast(`✓ เปลี่ยนรูปที่ ${i+1} แล้ว (${tempImg.naturalWidth}×${tempImg.naturalHeight})`);
-    };
-    tempImg.src=ev.target.result;
-  };
-  r.readAsDataURL(file);
-  event.target.value='';
-}
-
-function saveImgCard(i){
-  siteData.images[i].title=document.getElementById('img-t-'+i).value;
-  siteData.images[i].caption=document.getElementById('img-c-'+i).value;
-  persistImages();        // ✅ บันทึกลง localStorage
-  renderGallery();
-  showToast('บันทึกรูปที่ '+(i+1)+' ✓');
-}
-function deleteImgCard(i){
-  if(confirm('ลบรูปที่ '+(i+1)+'?')){
-    siteData.images.splice(i,1);
-    persistImages();      // ✅ บันทึกลง localStorage
-    renderAdminImgCards();renderGallery();
-    showToast('ลบแล้ว');
-  }
-}
-
-// Add new images
-function handleUploadFiles(files){
-  let loaded=0;
-  const total=Array.from(files).filter(f=>f.type.startsWith('image/')).length;
-  if(!total){showToast('⚠️ รองรับเฉพาะไฟล์รูปภาพ');return;}
-  Array.from(files).forEach(file=>{
-    if(!file.type.startsWith('image/')) return;
-    const r=new FileReader();
-    r.onload=ev=>{
-      const tempImg=new Image();
-      tempImg.onload=()=>{
-        siteData.images.push({
-          src:ev.target.result,
-          title:'รูปใหม่',caption:'แคปชั่น...',
-          w:tempImg.naturalWidth,h:tempImg.naturalHeight
-        });
-        loaded++;
-        if(loaded===total){
-          persistImages();    // ✅ บันทึกลง localStorage
-          renderAdminImgCards();renderGallery();
-          showToast(`✓ เพิ่ม ${total} รูปแล้ว — บันทึกแล้ว`);
-        }
-      };
-      tempImg.src=ev.target.result;
-    };
-    r.readAsDataURL(file);
-  });
-}
-function handleUpload(e){handleUploadFiles(e.target.files);e.target.value='';}
-
-// Drag-to-reorder
-let _dragIdx=-1;
-function dragStart(e,i){_dragIdx=i;e.currentTarget.style.opacity='.45';}
-function dragEnd(){
-  document.querySelectorAll('.admin-img-card-wrap').forEach(el=>el.style.opacity='1');
-  _dragIdx=-1;
-}
-function dragDrop(e,targetIdx){
-  if(_dragIdx<0||_dragIdx===targetIdx) return;
-  const moved=siteData.images.splice(_dragIdx,1)[0];
-  siteData.images.splice(targetIdx,0,moved);
-  persistImages();          // ✅ บันทึกลง localStorage
-  renderAdminImgCards();renderGallery();
-  showToast('เรียงลำดับใหม่แล้ว ✓');
-}
 
 // ════════════════════════════════════
 //  SAVE ALL
@@ -2320,16 +2161,14 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
     return c;
   }
 
-  // สร้าง icons หลังจาก font โหลดเสร็จ
-  let icons = [];
-  function initIcons(){
-    icons = [
-      mkIcon('🌹',22), mkIcon('❤️',20), mkIcon('🌹',18),
-      mkIcon('❤️',16), mkIcon('🥀',18), mkIcon('💕',16),
-      mkIcon('❤️',22), mkIcon('🌹',24),
-    ];
-  }
+  // สร้าง icons ทันทีแบบ synchronous (แก้ไข: ไม่รอ fonts.ready เพื่อป้องกัน race condition)
+  const icons = [
+    mkIcon('🌹',22), mkIcon('❤️',20), mkIcon('🌹',18),
+    mkIcon('❤️',16), mkIcon('🥀',18), mkIcon('💕',16),
+    mkIcon('❤️',22), mkIcon('🌹',24),
+  ];
 
+  // เก็บ canvas object ตรงๆ ใน particle (แก้ไข: ไม่ใช้ index เพื่อป้องกัน lookup ผิดพลาด)
   const P = Array.from({length:40}, ()=>({
     x:   Math.random() * window.innerWidth,
     y:   Math.random() * window.innerHeight * 2 - window.innerHeight,
@@ -2340,13 +2179,12 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
     sa:  Math.random() * Math.PI * 2,
     rot: Math.random() * Math.PI * 2,
     rs:  (Math.random() - .5) * .022,
-    icIdx: Math.floor(Math.random() * 8),
+    ic:  icons[Math.floor(Math.random() * icons.length)],
     al:  .55 + Math.random() * .45,
   }));
 
   function loop(){
     ctx.clearRect(0, 0, cv.width, cv.height);
-    if(!icons.length){ requestAnimationFrame(loop); return; }
     const W = cv.width, H = cv.height;
     P.forEach(p=>{
       p.sa  += p.sws;
@@ -2354,31 +2192,25 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
       p.y   += p.sp;
       p.rot += p.rs;
       if(p.y > H + 60){
-        p.y = -60;
-        p.x = Math.random() * W;
+        p.y  = -60;
+        p.x  = Math.random() * W;
         p.sp = .8 + Math.random() * 1.6;
-        p.icIdx = Math.floor(Math.random() * icons.length);
+        p.ic = icons[Math.floor(Math.random() * icons.length)];
         p.sc = .5 + Math.random() * .9;
       }
-      const ic = icons[p.icIdx % icons.length];
-      if(!ic) return;
-      const s = p.sc, iw = ic.width*s, ih = ic.height*s;
+      const s = p.sc, iw = p.ic.width*s, ih = p.ic.height*s;
       ctx.save();
       ctx.globalAlpha = p.al;
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot);
-      ctx.drawImage(ic, -iw/2, -ih/2, iw, ih);
+      ctx.drawImage(p.ic, -iw/2, -ih/2, iw, ih);
       ctx.restore();
     });
     requestAnimationFrame(loop);
   }
 
-  // รอให้ font emoji โหลดก่อนแล้วค่อยเริ่ม
-  if(document.fonts && document.fonts.ready){
-    document.fonts.ready.then(()=>{ initIcons(); loop(); });
-  } else {
-    setTimeout(()=>{ initIcons(); loop(); }, 500);
-  }
+  // เริ่ม loop ทันที (แก้ไข: ไม่รอ async callback ที่อาจไม่ทำงานบางสภาพแวดล้อม)
+  loop();
 })();
 
 // ════════════════════════════════════

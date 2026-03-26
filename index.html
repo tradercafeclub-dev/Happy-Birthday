@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Birthday My Wife🌹</title>
+<title>Birthday to my Wife🌹</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@600;700&family=Sarabun:wght@300;400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600&family=Kanit:wght@300;400;500;600&family=Prompt:wght@300;400;500;600&family=Mitr:wght@300;400;500&family=Charm:wght@400;700&family=Itim&family=Chonburi&display=swap" rel="stylesheet">
 <style>
@@ -324,10 +324,48 @@ body{font-family:var(--body-font);background:var(--dark);color:var(--white);over
         <label>ลำดับ (Order)</label>
         <input type="number" id="im-order" placeholder="0" value="0" min="0">
       </div>
+      <!-- [v7] รูปภาพ: อัปโหลดได้โดยตรง หรือวาง URL -->
       <div class="af" style="grid-column:span 2;">
-        <label>URL รูปภาพ</label>
-        <input type="text" id="im-img" placeholder="https://...jpg">
+        <label>รูปภาพ Item</label>
+
+        <!-- Drop zone (drag & drop ได้) -->
+        <div id="im-dropzone"
+          style="border:2px dashed rgba(192,17,43,.3);border-radius:10px;padding:14px;margin-bottom:8px;transition:border-color .2s,background .2s;cursor:pointer;"
+          ondragover="event.preventDefault();this.style.borderColor='var(--red2)';this.style.background='rgba(192,17,43,.06)';"
+          ondragleave="this.style.borderColor='rgba(192,17,43,.3)';this.style.background='';"
+          ondrop="event.preventDefault();this.style.borderColor='rgba(192,17,43,.3)';this.style.background='';handleItemImgDrop(event);"
+          onclick="document.getElementById('im-file-input').click()">
+
+          <!-- Preview (ซ่อนถ้าไม่มีรูป) -->
+          <div id="im-img-preview-wrap" style="display:none;margin-bottom:10px;border-radius:8px;overflow:hidden;position:relative;">
+            <img id="im-img-preview" src="" alt="preview"
+              style="width:100%;max-height:200px;object-fit:contain;display:block;background:#0a0003;">
+            <button onclick="event.stopPropagation();clearItemImg()" title="ลบรูป"
+              style="position:absolute;top:6px;right:6px;background:rgba(192,17,43,.85);border:none;border-radius:50%;width:26px;height:26px;color:white;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>
+          </div>
+
+          <!-- Upload hint (ซ่อนถ้ามีรูปแล้ว) -->
+          <div id="im-upload-hint" style="text-align:center;padding:4px 0;pointer-events:none;">
+            <div style="font-size:1.8rem;margin-bottom:6px;">📁</div>
+            <div style="font-size:.82rem;color:rgba(255,160,160,.65);">คลิกหรือลากรูปมาวางที่นี่</div>
+            <div style="font-size:.72rem;color:rgba(255,160,160,.35);margin-top:3px;">JPG, PNG, WEBP</div>
+          </div>
+        </div>
+
+        <!-- Hidden file input -->
+        <input type="file" id="im-file-input" accept="image/*" style="display:none" onchange="handleItemImgUpload(event)">
+
+        <!-- Status + URL row -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <span style="font-size:.75rem;color:rgba(255,160,160,.4);">หรือวาง URL:</span>
+          <span id="im-upload-status" style="font-size:.78rem;flex:1;min-height:18px;"></span>
+        </div>
+
+        <!-- URL input (ยังคงใช้ได้เสมอ) -->
+        <input type="text" id="im-img" placeholder="https://...jpg (วาง URL รูปภาพ หรือลากรูปด้านบน)"
+          oninput="onItemImgUrlChange(this.value)">
       </div>
+
       <div class="af" style="grid-column:span 2;">
         <label>URL ลิงก์ (คลิกแล้วเปิด)</label>
         <input type="text" id="im-link" placeholder="https://...">
@@ -335,7 +373,7 @@ body{font-family:var(--body-font);background:var(--dark);color:var(--white);over
     </div>
     <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
       <button class="btn btn-ghost" onclick="closeItemModal()">ยกเลิก</button>
-      <button class="btn btn-primary" onclick="saveItem()">💾 บันทึก</button>
+      <button class="btn btn-primary" id="im-save-btn" onclick="saveItem()">💾 บันทึก</button>
     </div>
   </div>
 </div>
@@ -1323,6 +1361,9 @@ function openItemModal(idx){
   const pageEl=document.getElementById('im-page');
   pageEl.innerHTML=BDAY_TABS.map(tb=>`<option value="${tb.id}">${tb.icon} ${tb.label}</option>`).join('');
 
+  // reset upload state
+  setItemImgStatus('','');
+
   if(isEdit){
     const it=BDAY_ITEMS[_editItemIdx];
     document.getElementById('im-noco-id').value=it._nocoId||'';
@@ -1335,6 +1376,8 @@ function openItemModal(idx){
     document.getElementById('im-order').value=it.o||0;
     document.getElementById('im-img').value=it.i||'';
     document.getElementById('im-link').value=it.l||'';
+    // [v7] แสดง preview ถ้ามีรูปอยู่แล้ว
+    setItemImgPreview(it.i||'');
   } else {
     document.getElementById('im-noco-id').value='';
     document.getElementById('im-local-idx').value=-1;
@@ -1346,11 +1389,118 @@ function openItemModal(idx){
     document.getElementById('im-order').value=BDAY_ITEMS.length;
     document.getElementById('im-img').value='';
     document.getElementById('im-link').value='';
+    setItemImgPreview('');
   }
   document.getElementById('item-modal').classList.add('active');
   setTimeout(()=>document.getElementById('im-title').focus(),100);
 }
-function closeItemModal(){document.getElementById('item-modal').classList.remove('active');}
+function closeItemModal(){
+  document.getElementById('item-modal').classList.remove('active');
+  setItemImgStatus('','');
+}
+
+// ════════════════════════════════════
+//  [v7] ITEM MODAL — IMAGE UPLOAD HELPERS
+// ════════════════════════════════════
+
+// อัปเดต status text ใน modal
+function setItemImgStatus(msg, color='#fbbf24'){
+  const el=document.getElementById('im-upload-status');
+  if(el) el.innerHTML=msg?`<span style="color:${color}">${msg}</span>`:'';
+}
+
+// แสดง/ซ่อน preview รูปใน modal
+function setItemImgPreview(url){
+  const wrap=document.getElementById('im-img-preview-wrap');
+  const img=document.getElementById('im-img-preview');
+  const hint=document.getElementById('im-upload-hint');
+  if(!wrap||!img) return;
+  if(url){
+    img.src=url;
+    img.onerror=()=>{wrap.style.display='none';if(hint)hint.style.display='block';};
+    img.onload=()=>{wrap.style.display='block';if(hint)hint.style.display='none';};
+    wrap.style.display='block';
+  } else {
+    wrap.style.display='none';
+    img.src='';
+    if(hint) hint.style.display='block';
+  }
+}
+
+// เมื่อผู้ใช้พิมพ์/วาง URL ในช่อง input
+function onItemImgUrlChange(url){
+  const trimmed=(url||'').trim();
+  if(trimmed){ setItemImgPreview(trimmed); }
+  else { setItemImgPreview(''); }
+}
+
+// ลบรูปออกจาก modal
+function clearItemImg(){
+  document.getElementById('im-img').value='';
+  setItemImgPreview('');
+  setItemImgStatus('','');
+}
+
+// Drag & Drop บน drop zone
+function handleItemImgDrop(event){
+  const files=event.dataTransfer.files;
+  if(files&&files.length){
+    // ถ้าเป็นไฟล์รูป
+    const imgFile=Array.from(files).find(f=>f.type.startsWith('image/'));
+    if(imgFile){
+      handleItemImgUpload({target:{files:[imgFile],value:''}});
+      return;
+    }
+  }
+  // ถ้าเป็น text URL
+  const text=event.dataTransfer.getData('text/plain')||'';
+  if(text.startsWith('http')){
+    document.getElementById('im-img').value=text;
+    setItemImgPreview(text);
+  }
+}
+
+// เมื่อผู้ใช้เลือกไฟล์อัปโหลด
+async function handleItemImgUpload(event){
+  const file=event.target.files[0];
+  if(event.target.value!==undefined) event.target.value=''; // reset input
+  if(!file) return;
+  if(!file.type.startsWith('image/')){showToast('⚠️ รองรับเฉพาะไฟล์รูปภาพ');return;}
+
+  // ตรวจ ImgBB key
+  if(!IMGBB_KEY){
+    setItemImgStatus('❌ ยังไม่ได้ตั้งค่า ImgBB API Key — ไปที่ ⚙️ ตั้งค่า','#f87171');
+    showToast('⚠️ กรุณาตั้งค่า ImgBB API Key ใน ⚙️ ตั้งค่าก่อน');
+    return;
+  }
+
+  // Disable save button ระหว่างอัปโหลด
+  const saveBtn=document.getElementById('im-save-btn');
+  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ กำลังอัปโหลด...';}
+  setItemImgStatus('⏳ กำลังอัปโหลดรูป...','#fbbf24');
+
+  // แสดง preview local ก่อน (responsive UX)
+  const localUrl=URL.createObjectURL(file);
+  setItemImgPreview(localUrl);
+
+  try{
+    const result=await uploadToImgBB(file, file.name);
+    // ใส่ URL จริงใน field
+    document.getElementById('im-img').value=result.url;
+    // อัปเดต preview เป็น URL จริง
+    setItemImgPreview(result.url);
+    URL.revokeObjectURL(localUrl);
+    setItemImgStatus(`✅ อัปโหลดสำเร็จ (${result.width}×${result.height}px)`, '#4ade80');
+    showToast('✅ อัปโหลดรูปสำเร็จ');
+  }catch(e){
+    setItemImgStatus('❌ อัปโหลดไม่สำเร็จ: '+e.message, '#f87171');
+    setItemImgPreview('');
+    URL.revokeObjectURL(localUrl);
+    showToast('❌ ImgBB: '+e.message);
+  }finally{
+    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='💾 บันทึก';}
+  }
+}
 async function saveItem(){
   const t=document.getElementById('im-title').value.trim();
   if(!t){showToast('⚠️ กรอกหัวข้อ');return;}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Happy Birthday My Wife🌹</title>
+<title>Birthday My Wife🌹</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@600;700&family=Sarabun:wght@300;400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600&family=Kanit:wght@300;400;500;600&family=Prompt:wght@300;400;500;600&family=Mitr:wght@300;400;500&family=Charm:wght@400;700&family=Itim&family=Chonburi&display=swap" rel="stylesheet">
 <style>
@@ -469,6 +469,9 @@ body{font-family:var(--body-font);background:var(--dark);color:var(--white);over
       <div class="admin-card">
         <h3>📷 จัดการรูปภาพ Gallery</h3>
 
+        <!-- [FIX v6] NocoDB sync status for gallery -->
+        <div id="gallery-noco-status" style="margin-bottom:14px;"></div>
+
         <!-- Add zone -->
         <div class="upload-area" id="drop-zone" onclick="document.getElementById('upload-input').click()"
           ondragover="event.preventDefault();this.style.borderColor='var(--red2)'"
@@ -486,7 +489,8 @@ body{font-family:var(--body-font);background:var(--dark);color:var(--white);over
         <div style="display:flex;align-items:center;gap:10px;margin:14px 0 10px;flex-wrap:wrap;">
           <span id="photo-count" style="font-size:.82rem;color:rgba(255,160,160,.6);">0 รูป</span>
           <span style="font-size:.78rem;color:rgba(255,160,160,.4);">· คลิก 🔄 เพื่อเปลี่ยนรูป · ลากปรับลำดับ</span>
-          <div style="margin-left:auto;">
+          <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" onclick="syncMissingToNoco()" title="อัปโหลดรูปที่ยังไม่ได้บันทึกใน NocoDB">☁️ Sync รูปที่ขาด</button>
             <button class="btn btn-ghost btn-sm" onclick="syncGalleryFromNoco()">☁️ โหลดจาก NocoDB</button>
           </div>
         </div>
@@ -820,8 +824,19 @@ function persistSiteData(){
 }
 function persistImages(){
   try{
-    // บีบรูปออกก่อน save (ตัดเฉพาะ src, title, caption, w, h)
-    const slim=siteData.images.map(img=>({src:img.src,title:img.title,caption:img.caption,w:img.w,h:img.h}));
+    // [FIX v6] เก็บ _nocoId, deleteHash, _sortOrder ด้วย — สำคัญมาก!
+    // หากตัดออก: หลัง refresh รูปจะไม่รู้ว่าอยู่ใน NocoDB แล้ว
+    // ทำให้ saveImgCard/replaceImgCard ไม่ sync ไป NocoDB → รูปหายเมื่อเปิดในอุปกรณ์อื่น
+    const slim=siteData.images.map(img=>({
+      src:        img.src        || '',
+      title:      img.title      || '',
+      caption:    img.caption    || '',
+      w:          img.w          || 0,
+      h:          img.h          || 0,
+      deleteHash: img.deleteHash || '',
+      _nocoId:    img._nocoId    || null,
+      _sortOrder: img._sortOrder || 0,
+    }));
     localStorage.setItem(LS_IMGS,JSON.stringify(slim));
   }catch(e){
     if(e.name==='QuotaExceededError'||e.code===22){
@@ -1601,7 +1616,7 @@ function switchAdminTab(id){
   if(id==='content'){updateNocoStatusBar();renderAdminTabList();renderAdminItemList();}
   if(id==='settings'){loadNocoConfigUI();refreshStorageStatus();}
   if(id==='font'){renderFontGrid();}
-  if(id==='photos'){renderAdminImgCards();}
+  if(id==='photos'){renderAdminImgCards();updateGalleryNocoStatus();}
   if(id==='text'){
     document.getElementById('e-hero-title').value=siteData.heroTitle;
     document.getElementById('e-hero-subtitle').value=siteData.heroSubtitle;
@@ -1792,12 +1807,24 @@ async function replaceImgCard(i, event){
     siteData.images[i].w           = result.width;
     siteData.images[i].h           = result.height;
     siteData.images[i].deleteHash  = result.deleteHash;
-    // อัปเดต NocoDB
-    if(siteData.images[i]._nocoId && NOCO_TBL.gallery){
-      await updateGalleryInNoco(siteData.images[i]._nocoId,{
-        ImageUrl:result.url, Width:result.width,
-        Height:result.height, DeleteHash:result.deleteHash
-      });
+    // [FIX v6] ถ้ามี _nocoId → patch, ถ้าไม่มี → สร้างใหม่ใน NocoDB
+    if(NOCO_TBL.gallery){
+      if(siteData.images[i]._nocoId){
+        await updateGalleryInNoco(siteData.images[i]._nocoId,{
+          ImageUrl:result.url, Width:result.width,
+          Height:result.height, DeleteHash:result.deleteHash
+        });
+      } else {
+        const id = await saveGalleryToNoco({
+          ...siteData.images[i], _sortOrder: siteData.images[i]._sortOrder || i
+        });
+        if(id){
+          siteData.images[i]._nocoId = id;
+          showToast(`☁️ บันทึกรูปใหม่ใน NocoDB แล้ว (ID: ${id})`);
+        } else {
+          showToast('⚠️ อัปโหลดรูปสำเร็จ แต่บันทึก NocoDB ไม่ได้ — ตรวจสอบ Table ID');
+        }
+      }
     }
     persistImages();
     renderAdminImgCards();
@@ -1814,15 +1841,29 @@ async function replaceImgCard(i, event){
 async function saveImgCard(i){
   siteData.images[i].title   = document.getElementById('img-t-'+i).value;
   siteData.images[i].caption = document.getElementById('img-c-'+i).value;
-  // อัปเดต NocoDB ถ้ามี
-  if(siteData.images[i]._nocoId && NOCO_TBL.gallery){
-    await updateGalleryInNoco(siteData.images[i]._nocoId,{
-      Title:   siteData.images[i].title,
-      Caption: siteData.images[i].caption,
-    });
+  // [FIX v6] ถ้ามี _nocoId → patch, ถ้าไม่มีแต่มีรูป → สร้างใหม่ใน NocoDB
+  if(NOCO_TBL.gallery){
+    if(siteData.images[i]._nocoId){
+      await updateGalleryInNoco(siteData.images[i]._nocoId,{
+        Title:   siteData.images[i].title,
+        Caption: siteData.images[i].caption,
+      });
+    } else if(siteData.images[i].src){
+      // รูปนี้ยังไม่มีใน NocoDB — สร้างใหม่
+      const id = await saveGalleryToNoco({
+        ...siteData.images[i], _sortOrder: siteData.images[i]._sortOrder || i
+      });
+      if(id){
+        siteData.images[i]._nocoId = id;
+        showToast(`☁️ บันทึกรูปขึ้น NocoDB แล้ว`);
+      } else {
+        showToast('⚠️ บันทึกข้อมูลเฉพาะ browser — ตรวจสอบ NocoDB Table ID');
+      }
+    }
   }
   persistImages();
   renderGallery();
+  renderAdminImgCards();
   showToast('บันทึกรูปที่ '+(i+1)+' ✓');
 }
 
@@ -1845,6 +1886,11 @@ function handleUploadFiles(files){
   if(!fileArr.length){showToast('⚠️ รองรับเฉพาะไฟล์รูปภาพ');return;}
   if(!IMGBB_KEY){showToast('⚠️ กรุณาตั้งค่า ImgBB API Key ก่อน');return;}
 
+  // ตรวจ NocoDB ก่อน — ถ้าไม่มีให้เตือน
+  if(!NOCO_TBL.gallery){
+    showToast('⚠️ ยังไม่ได้ตั้งค่า NocoDB Gallery Table ID — รูปจะเก็บเฉพาะ browser นี้เท่านั้น!');
+  }
+
   // แสดง loading card สำหรับแต่ละรูป
   fileArr.forEach(()=>{
     siteData.images.push({src:'',title:'กำลังอัปโหลด...',caption:'',w:0,h:0,_uploading:true});
@@ -1852,6 +1898,7 @@ function handleUploadFiles(files){
   renderAdminImgCards();
 
   let done=0;
+  let nocoFailed=0;
   const startIdx = siteData.images.length - fileArr.length;
 
   fileArr.forEach((file, fi)=>{
@@ -1866,18 +1913,36 @@ function handleUploadFiles(files){
           h:          result.height,
           deleteHash: result.deleteHash,
           _sortOrder: imgIdx,
+          _nocoId:    null,  // [FIX v6] ตั้งค่าเริ่มต้นชัดเจน
         };
-        // บันทึกไป NocoDB
+        // [FIX v6] บันทึกไป NocoDB — ถ้าล้มเหลวให้แจ้งผู้ใช้ชัดเจน
         if(NOCO_TBL.gallery){
-          const id = await saveGalleryToNoco({...siteData.images[imgIdx], _sortOrder:imgIdx});
-          if(id) siteData.images[imgIdx]._nocoId = id;
+          try{
+            const id = await saveGalleryToNoco({...siteData.images[imgIdx], _sortOrder:imgIdx});
+            if(id){
+              siteData.images[imgIdx]._nocoId = id;
+            } else {
+              nocoFailed++;
+              console.warn(`saveGalleryToNoco returned null for image ${imgIdx}`);
+            }
+          }catch(nocoErr){
+            nocoFailed++;
+            console.error('NocoDB save error:',nocoErr);
+          }
         }
+        // [FIX v6] บันทึก localStorage ทันทีหลังแต่ละรูป (รวม _nocoId ที่เพิ่งได้)
+        persistImages();
         done++;
         if(done===fileArr.length){
-          persistImages();
           renderAdminImgCards();
           renderGallery();
-          showToast(`✅ อัปโหลดสำเร็จ ${done}/${fileArr.length} รูป`);
+          if(nocoFailed>0){
+            showToast(`⚠️ อัปโหลดสำเร็จ ${done} รูป แต่บันทึก NocoDB ล้มเหลว ${nocoFailed} รูป — ตรวจสอบ Table ID ใน ⚙️ ตั้งค่า`);
+          } else if(NOCO_TBL.gallery){
+            showToast(`✅ อัปโหลด + บันทึก NocoDB สำเร็จ ${done}/${fileArr.length} รูป ☁️`);
+          } else {
+            showToast(`✅ อัปโหลด ImgBB สำเร็จ ${done}/${fileArr.length} รูป (ยังไม่ได้ตั้งค่า NocoDB)`);
+          }
         }
       })
       .catch(e=>{
@@ -1898,9 +1963,54 @@ async function syncGalleryFromNoco(){
   if(ok){
     renderAdminImgCards();
     renderGallery();
+    updateGalleryNocoStatus();
     showToast(`✅ โหลด ${siteData.images.length} รูปจาก NocoDB แล้ว`);
   } else {
     showToast('ℹ️ NocoDB ยังไม่มีข้อมูล Gallery');
+  }
+}
+
+// [FIX v6] Sync รูปที่ขาด NocoDB — ตรวจสอบและอัปโหลดรูปที่ยังไม่มี _nocoId
+async function syncMissingToNoco(){
+  if(!NOCO_TBL.gallery){showToast('⚠️ ยังไม่ได้ตั้งค่า Gallery Table ID');return;}
+  const missing = siteData.images.filter(img => img.src && !img._nocoId);
+  if(!missing.length){showToast('✅ รูปทุกรูปบันทึกใน NocoDB แล้ว');return;}
+  showToast(`⏳ กำลัง Sync ${missing.length} รูปที่ขาด...`);
+  let ok=0, fail=0;
+  for(let i=0;i<siteData.images.length;i++){
+    const img=siteData.images[i];
+    if(img.src && !img._nocoId){
+      try{
+        const id = await saveGalleryToNoco({...img, _sortOrder: img._sortOrder||i});
+        if(id){ siteData.images[i]._nocoId=id; ok++; }
+        else fail++;
+      }catch(e){ fail++; }
+    }
+  }
+  persistImages();
+  renderAdminImgCards();
+  updateGalleryNocoStatus();
+  showToast(fail>0
+    ? `⚠️ Sync แล้ว ${ok} รูป, ล้มเหลว ${fail} รูป`
+    : `✅ Sync ครบ ${ok} รูปใน NocoDB แล้ว ☁️`
+  );
+}
+
+// [FIX v6] อัปเดต status bar ของ gallery ใน admin
+function updateGalleryNocoStatus(){
+  const el=document.getElementById('gallery-noco-status');
+  if(!el) return;
+  const total=siteData.images.filter(img=>img.src).length;
+  const synced=siteData.images.filter(img=>img.src && img._nocoId).length;
+  const missing=total-synced;
+  if(!NOCO_TBL.gallery){
+    el.innerHTML=`<div class="noco-status warn">⚠️ ยังไม่ได้ตั้งค่า NocoDB Gallery Table ID — รูปจะเก็บเฉพาะ browser นี้ ไม่แสดงเมื่อเปิดในอุปกรณ์อื่น</div>`;
+  } else if(missing>0){
+    el.innerHTML=`<div class="noco-status warn">⚠️ พบรูป ${missing} รูปที่ยังไม่ได้บันทึกใน NocoDB (${synced}/${total} รูป sync แล้ว) — กด "☁️ Sync รูปที่ขาด"</div>`;
+  } else if(total===0){
+    el.innerHTML=`<div class="noco-status ok">☁️ เชื่อมต่อ NocoDB แล้ว — พร้อมอัปโหลดรูป</div>`;
+  } else {
+    el.innerHTML=`<div class="noco-status ok">☁️ รูปทั้ง ${total} รูป บันทึกใน NocoDB แล้ว — แสดงได้ทุกอุปกรณ์ ✅</div>`;
   }
 }
 

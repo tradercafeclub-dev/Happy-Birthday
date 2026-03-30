@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Birthday to my Wife🌹</title>
+<title>Birthday my Wife🌹</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@600;700&family=Sarabun:wght@300;400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600&family=Kanit:wght@300;400;500;600&family=Prompt:wght@300;400;500;600&family=Mitr:wght@300;400;500&family=Charm:wght@400;700&family=Itim&family=Chonburi&display=swap" rel="stylesheet">
 <style>
@@ -483,7 +483,11 @@ body{font-family:var(--body-font);background:var(--dark);color:var(--white);over
           <div class="af"><label>Wish Title</label><input type="text" id="e-wish-title"></div>
           <div class="af"><label>ข้อความ Wish (ใช้ \n ขึ้นบรรทัด)</label><textarea id="e-wish-text"></textarea></div>
         </div>
-        <button class="btn btn-primary" onclick="saveAll()">💾 บันทึกทั้งหมด</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-primary" onclick="saveAll()">💾 บันทึกทั้งหมด</button>
+          <button class="btn btn-ghost btn-sm" onclick="syncTextFromNoco()" title="โหลดข้อความจาก NocoDB">☁️ โหลดจาก NocoDB</button>
+          <span id="text-noco-status" style="font-size:.78rem;color:rgba(255,160,160,.5);"></span>
+        </div>
       </div>
     </div>
 
@@ -942,6 +946,75 @@ async function nocoCreateTable(tableName,fields){
 }
 
 // ════════════════════════════════════
+//  NOCO CONFIG TABLE — ข้อความหลัก + รหัสผ่าน
+// ════════════════════════════════════
+
+// บันทึก key/value เดียวใน bday_config (upsert: ค้นหาแล้ว patch หรือ post)
+const _cfgRowCache = {}; // key → NocoDB row Id
+
+async function nocoConfigSet(key, value){
+  if(!NOCO_TBL.config) return;
+  try{
+    if(_cfgRowCache[key]){
+      await nocoPatch(NOCO_TBL.config, _cfgRowCache[key], {Key:key, Value:String(value)});
+    } else {
+      // โหลด rows มาหา id ก่อน
+      const rows = await nocoGet(NOCO_TBL.config);
+      const row = rows.find(r=>r.Key===key);
+      if(row){
+        _cfgRowCache[key] = row.Id;
+        await nocoPatch(NOCO_TBL.config, row.Id, {Key:key, Value:String(value)});
+      } else {
+        const r = await nocoPost(NOCO_TBL.config, {Key:key, Value:String(value)});
+        if(r.Id) _cfgRowCache[key] = r.Id;
+      }
+    }
+  }catch(e){console.warn('nocoConfigSet:', key, e.message);}
+}
+
+async function nocoConfigGetAll(){
+  if(!NOCO_TBL.config) return {};
+  try{
+    const rows = await nocoGet(NOCO_TBL.config);
+    const map = {};
+    rows.forEach(r=>{ if(r.Key){ map[r.Key]=r.Value; _cfgRowCache[r.Key]=r.Id; } });
+    return map;
+  }catch(e){console.warn('nocoConfigGetAll:', e.message); return {};}
+}
+
+// บันทึกข้อความหลักทั้งหมดไป NocoDB bday_config
+async function saveTextToNoco(){
+  if(!NOCO_TBL.config) return;
+  const fields = {
+    hero_title:    siteData.heroTitle,
+    hero_subtitle: siteData.heroSubtitle,
+    hero_message:  siteData.heroMessage,
+    wish_title:    siteData.wishTitle,
+    wish_text:     siteData.wishText,
+    selected_font: siteData.selectedFont,
+  };
+  await Promise.all(Object.entries(fields).map(([k,v])=>nocoConfigSet(k,v)));
+}
+
+// โหลดข้อความหลักจาก NocoDB bday_config → อัปเดต siteData
+async function loadTextFromNoco(){
+  if(!NOCO_TBL.config) return false;
+  try{
+    const map = await nocoConfigGetAll();
+    let changed = false;
+    if(map.hero_title)    { siteData.heroTitle    = map.hero_title;    changed=true; }
+    if(map.hero_subtitle) { siteData.heroSubtitle = map.hero_subtitle; changed=true; }
+    if(map.hero_message)  { siteData.heroMessage  = map.hero_message;  changed=true; }
+    if(map.wish_title)    { siteData.wishTitle     = map.wish_title;    changed=true; }
+    if(map.wish_text)     { siteData.wishText      = map.wish_text;     changed=true; }
+    if(map.selected_font) { siteData.selectedFont  = map.selected_font; changed=true; }
+    if(map.admin_password){ ADMIN_PW = map.admin_password; localStorage.setItem(LS_PW, ADMIN_PW); }
+    if(changed) persistSiteData();
+    return changed;
+  }catch(e){console.warn('loadTextFromNoco:', e.message); return false;}
+}
+
+// ════════════════════════════════════
 //  ImgBB UPLOAD
 // ════════════════════════════════════
 async function uploadToImgBB(fileOrBase64, filename='image'){
@@ -1052,7 +1125,8 @@ function renderFontGrid(){
 function selectFont(n){
   siteData.selectedFont=n; applyFont(n);
   document.getElementById('font-sample').style.fontFamily=`'${n}',sans-serif`;
-  persistSiteData();       // ✅ บันทึกฟอนต์
+  persistSiteData();       // ✅ บันทึกฟอนต์ localStorage
+  if(NOCO_TBL.config) nocoConfigSet('selected_font', n).catch(()=>{});  // ☁️ sync NocoDB
   renderFontGrid();
 }
 
@@ -1760,6 +1834,33 @@ function changePw(){
 // ════════════════════════════════════
 //  ADMIN NAVIGATION
 // ════════════════════════════════════
+// ── โหลดข้อความจาก NocoDB (admin button) ──
+async function syncTextFromNoco(){
+  const statusEl = document.getElementById('text-noco-status');
+  if(!NOCO_TBL.config){
+    if(statusEl) statusEl.textContent = '⚠️ ยังไม่ได้ตั้งค่า NocoDB config table';
+    showToast('⚠️ ตั้งค่า bday_config Table ID ก่อน');
+    return;
+  }
+  if(statusEl) statusEl.textContent = '⏳ กำลังโหลด...';
+  const changed = await loadTextFromNoco();
+  if(changed){
+    // อัปเดต form fields
+    const fv=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val;};
+    fv('e-hero-title',    siteData.heroTitle);
+    fv('e-hero-subtitle', siteData.heroSubtitle);
+    fv('e-hero-message',  siteData.heroMessage);
+    fv('e-wish-title',    siteData.wishTitle);
+    fv('e-wish-text',     siteData.wishText);
+    renderMain();
+    if(statusEl) statusEl.textContent = '✅ โหลดจาก NocoDB แล้ว';
+    showToast('✅ โหลดข้อความจาก NocoDB แล้ว ☁️');
+  } else {
+    if(statusEl) statusEl.textContent = 'ℹ️ NocoDB ยังไม่มีข้อมูลข้อความ';
+    showToast('ℹ️ NocoDB ยังไม่มีข้อมูลข้อความ');
+  }
+}
+
 function switchAdminTab(id){
   document.querySelectorAll('.atnav').forEach(b=>b.classList.toggle('active',b.dataset.at===id));
   document.querySelectorAll('.atpanel').forEach(p=>p.classList.toggle('active',p.id==='at-'+id));
@@ -1773,6 +1874,8 @@ function switchAdminTab(id){
     document.getElementById('e-hero-message').value=siteData.heroMessage;
     document.getElementById('e-wish-title').value=siteData.wishTitle;
     document.getElementById('e-wish-text').value=siteData.wishText;
+    const statusEl=document.getElementById('text-noco-status');
+    if(statusEl) statusEl.textContent = NOCO_TBL.config ? '☁️ NocoDB config พร้อมใช้งาน' : '⚠️ ยังไม่ได้ตั้งค่า NocoDB config table';
   }
 }
 
@@ -2192,23 +2295,35 @@ async function dragDrop(e,targetIdx){
 // ════════════════════════════════════
 //  SAVE ALL
 // ════════════════════════════════════
-function saveAll(){
+async function saveAll(){
   // อ่านค่าจาก form ถ้า element มีอยู่
   const fv=id=>{const el=document.getElementById(id);return el?el.value:null;}
-  if(fv('e-hero-title')!==null)   siteData.heroTitle   = fv('e-hero-title')  ||siteData.heroTitle;
-  if(fv('e-hero-subtitle')!==null) siteData.heroSubtitle= fv('e-hero-subtitle')||siteData.heroSubtitle;
-  if(fv('e-hero-message')!==null)  siteData.heroMessage = fv('e-hero-message') ||siteData.heroMessage;
-  if(fv('e-wish-title')!==null)    siteData.wishTitle   = fv('e-wish-title')  ||siteData.wishTitle;
-  if(fv('e-wish-text')!==null)     siteData.wishText    = fv('e-wish-text')   ||siteData.wishText;
+  if(fv('e-hero-title')!==null)    siteData.heroTitle    = fv('e-hero-title')   ||siteData.heroTitle;
+  if(fv('e-hero-subtitle')!==null) siteData.heroSubtitle = fv('e-hero-subtitle')||siteData.heroSubtitle;
+  if(fv('e-hero-message')!==null)  siteData.heroMessage  = fv('e-hero-message') ||siteData.heroMessage;
+  if(fv('e-wish-title')!==null)    siteData.wishTitle    = fv('e-wish-title')   ||siteData.wishTitle;
+  if(fv('e-wish-text')!==null)     siteData.wishText     = fv('e-wish-text')    ||siteData.wishText;
 
-  // บันทึกแยกตาม key
+  // บันทึกลง LocalStorage ก่อน (ทันที)
   persistSiteData();   // ข้อความหลัก
   persistImages();     // รูปภาพ gallery
   persistTabs();       // หน้า/tabs
   persistItems();      // content items
 
   renderMain();
-  showToast('✓ บันทึกทั้งหมดแล้ว!');
+  showToast('💾 กำลังบันทึก...');
+
+  // บันทึกข้อความหลักขึ้น NocoDB (ถ้าตั้งค่าไว้)
+  if(NOCO_TBL.config){
+    try{
+      await saveTextToNoco();
+      showToast('✅ บันทึกทั้งหมดแล้ว (LocalStorage + NocoDB ☁️)');
+    }catch(e){
+      showToast('⚠️ บันทึก LocalStorage แล้ว แต่ NocoDB: '+e.message);
+    }
+  } else {
+    showToast('✓ บันทึก LocalStorage แล้ว (ยังไม่ได้ตั้งค่า NocoDB config table)');
+  }
 }
 
 // ════════════════════════════════════
@@ -2540,9 +2655,16 @@ async function init(){
         .catch(e=>console.warn('Items NocoDB:',e.message))
     );
 
+    // ☁️ ข้อความหลัก + รหัสผ่าน จาก bday_config
+    if(NOCO_TBL.config) promises.push(
+      loadTextFromNoco()
+        .catch(e=>console.warn('Config NocoDB:',e.message))
+    );
+
     await Promise.all(promises);
 
     // 3. re-render ทุกอย่างหลังโหลดเสร็จ
+    renderMain();
     renderContentSection();
 
   }catch(e){
